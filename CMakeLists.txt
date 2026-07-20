@@ -1,10 +1,15 @@
-idf_component_register(
-    SRCS
-        "src/dek_crc.c"
-        "src/dek_packet.c"
-        "src/dek_transport.c"
-        "src/message-types/dek_hello.c"
+cmake_minimum_required(VERSION 3.16)
 
-    INCLUDE_DIRS
-        "include"
+project(dek_protocol C)
+
+add_library(dek_protocol STATIC
+    src/dek_crc.c
+    src/dek_packet.c
+    src/dek_transport.c
+    src/message-types/dek_hello.c
+)
+
+target_include_directories(dek_protocol
+    PUBLIC
+        include
 )

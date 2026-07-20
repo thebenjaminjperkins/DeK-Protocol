@@ -1,4 +1,4 @@
-#include "../include/dek_crc.h"
+#include "dek/dek_crc.h"
 
 uint16_t dek_crc16(const uint8_t *data, uint16_t length) {
     // init crc

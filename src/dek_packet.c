@@ -1,5 +1,5 @@
-#include "../include/dek_packet.h"
-#include "../include/dek_crc.h"
+#include "dek/dek_packet.h"
+#include "dek/dek_crc.h"
 
 void dek_packet_init(dek_packet_header_t *header)
 {
