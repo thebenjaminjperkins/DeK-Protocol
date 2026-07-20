@@ -1,5 +1,7 @@
-#include "dek/dek_packet.h"
-#include "dek/dek_crc.h"
+#include <string.h>
+
+#include "dek_protocol/dek_crc.h"
+#include "dek_protocol/dek_packet.h"
 
 void dek_packet_init(dek_packet_header_t *header)
 {
@@ -19,12 +21,35 @@ void dek_packet_init(dek_packet_header_t *header)
     header->payload_length = 0;
 }
 
+bool dek_packet_header_is_valid(const dek_packet_header_t *header)
+{
+    if (header == NULL)
+    {
+        return false;
+    }
+
+    return header->magic[0] == DEK_PACKET_MAGIC_BYTE0 &&
+           header->magic[1] == DEK_PACKET_MAGIC_BYTE1 &&
+           header->protocol_version == DEK_PACKET_VERSION_V1 &&
+           header->header_length == DEK_PACKET_HEADER_SIZE;
+}
+
+uint16_t dek_packet_encoded_size(uint16_t payload_length)
+{
+    return (uint16_t)(DEK_PACKET_OVERHEAD + payload_length);
+}
+
 bool dek_packet_encode_header(
     const dek_packet_header_t *header,
     uint8_t *buffer,
     uint16_t buffer_size)
 {
     if (header == NULL || buffer == NULL || buffer_size < DEK_PACKET_HEADER_SIZE)
+    {
+        return false;
+    }
+
+    if (!dek_packet_header_is_valid(header))
     {
         return false;
     }
@@ -69,11 +94,6 @@ bool dek_packet_decode_header(
         return false;
     }
 
-    if (buffer[DEK_PACKET_OFFSET_HEADER_LENGTH] != DEK_PACKET_HEADER_SIZE)
-    {
-        return false;
-    }
-
     header->magic[0] = buffer[DEK_PACKET_OFFSET_MAGIC];
     header->magic[1] = buffer[DEK_PACKET_OFFSET_MAGIC + 1];
     header->protocol_version = buffer[DEK_PACKET_OFFSET_PROTOCOL_VERSION];
@@ -93,7 +113,7 @@ bool dek_packet_decode_header(
         (uint16_t)buffer[DEK_PACKET_OFFSET_PAYLOAD_LENGTH] |
         ((uint16_t)buffer[DEK_PACKET_OFFSET_PAYLOAD_LENGTH + 1] << 8);
 
-    return true;
+    return dek_packet_header_is_valid(header);
 }
 
 bool dek_packet_encode(
@@ -106,9 +126,7 @@ bool dek_packet_encode(
         return false;
     }
 
-    uint16_t required_size =
-        DEK_PACKET_OVERHEAD +
-        packet->header.payload_length;
+    uint16_t required_size = dek_packet_encoded_size(packet->header.payload_length);
 
     if (buffer_size < required_size)
     {
@@ -129,10 +147,13 @@ bool dek_packet_encode(
         return false;
     }
 
-    memcpy(
-        buffer + DEK_PACKET_HEADER_SIZE,
-        packet->payload,
-        packet->header.payload_length);
+    if (packet->header.payload_length > 0)
+    {
+        memcpy(
+            buffer + DEK_PACKET_HEADER_SIZE,
+            packet->payload,
+            packet->header.payload_length);
+    }
 
     uint16_t crc =
         dek_crc16(
@@ -173,9 +194,7 @@ bool dek_packet_decode(
         return false;
     }
 
-    uint16_t required_size =
-        DEK_PACKET_OVERHEAD +
-        packet->header.payload_length;
+    uint16_t required_size = dek_packet_encoded_size(packet->header.payload_length);
 
     if (buffer_size < required_size)
     {
@@ -201,6 +220,26 @@ bool dek_packet_decode(
     }
 
     packet->payload = buffer + DEK_PACKET_HEADER_SIZE;
+
+    return true;
+}
+
+bool dek_packet_validate(
+    const uint8_t *buffer,
+    uint16_t buffer_size,
+    uint16_t *packet_size)
+{
+    dek_packet_t packet;
+
+    if (!dek_packet_decode(&packet, buffer, buffer_size))
+    {
+        return false;
+    }
+
+    if (packet_size != NULL)
+    {
+        *packet_size = dek_packet_encoded_size(packet.header.payload_length);
+    }
 
     return true;
 }

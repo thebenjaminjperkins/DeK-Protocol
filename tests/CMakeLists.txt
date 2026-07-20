@@ -4,3 +4,5 @@ target_link_libraries(packet_test
     PRIVATE
         dek_protocol
 )
+
+add_test(NAME packet_test COMMAND packet_test)

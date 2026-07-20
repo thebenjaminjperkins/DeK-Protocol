@@ -1,7 +1,20 @@
-#include <stdio.h>
+#include <string.h>
 
-#include "dek/dek_transport.h"
-#include "dek/message-types/dek_hello.h"
+#include "dek_protocol/dek_crc.h"
+#include "dek_protocol/dek_transport.h"
+#include "dek_protocol/message-types/dek_hello.h"
+
+static uint16_t dek_transport_allocate_sequence(dek_transport_t *transport)
+{
+    uint16_t sequence_number = transport->next_sequence_number++;
+
+    if (transport->next_sequence_number == 0u)
+    {
+        transport->next_sequence_number = 1u;
+    }
+
+    return sequence_number;
+}
 /*
  * Reset the transport state before sending any packets.
  *
@@ -15,7 +28,8 @@ void dek_transport_init(dek_transport_t *transport)
         return;
     }
 
-    transport->next_sequence_number = 1;
+    memset(transport, 0, sizeof(*transport));
+    transport->next_sequence_number = 1u;
 }
 
 /*
@@ -47,14 +61,14 @@ bool dek_transport_send(
 
     /* Populate the packet header with transport-layer and message-specific fields. */
     packet.header.message_type = message_type;
-    packet.header.sequence_number = transport->next_sequence_number++;
+    packet.header.sequence_number = dek_transport_allocate_sequence(transport);
     packet.header.channel_id = channel;
     packet.header.payload_length = payload_length;
 
     /* The payload is referenced directly by the encoder. */
     packet.payload = payload;
 
-   if (!dek_packet_encode(
+    if (!dek_packet_encode(
         &packet,
         tx_buffer,
         tx_buffer_size))
@@ -62,13 +76,65 @@ bool dek_transport_send(
         return false;
     }
 
+    transport->packets_sent++;
+
     if (encoded_length != NULL)
     {
-        *encoded_length =
-            DEK_PACKET_OVERHEAD +
-            payload_length;
+        *encoded_length = dek_packet_encoded_size(payload_length);
     }
 
+    return true;
+}
+
+bool dek_transport_receive(
+    dek_transport_t *transport,
+    dek_packet_t *packet,
+    const uint8_t *rx_buffer,
+    uint16_t rx_buffer_size)
+{
+    dek_packet_header_t header;
+
+    if (transport == NULL || packet == NULL || rx_buffer == NULL)
+    {
+        return false;
+    }
+
+    if (!dek_packet_decode_header(&header, rx_buffer, rx_buffer_size))
+    {
+        transport->malformed_packets++;
+        return false;
+    }
+
+    {
+        uint16_t expected_size = dek_packet_encoded_size(header.payload_length);
+
+        if (rx_buffer_size < expected_size)
+        {
+            transport->malformed_packets++;
+            return false;
+        }
+
+        {
+            uint16_t crc_offset = (uint16_t)(expected_size - DEK_PACKET_CRC_SIZE);
+            uint16_t expected_crc =
+                (uint16_t)rx_buffer[crc_offset] |
+                ((uint16_t)rx_buffer[crc_offset + 1] << 8);
+
+            if (!dek_crc16_verify(rx_buffer, crc_offset, expected_crc))
+            {
+                transport->crc_errors++;
+                return false;
+            }
+        }
+    }
+
+    if (!dek_packet_decode(packet, rx_buffer, rx_buffer_size))
+    {
+        transport->malformed_packets++;
+        return false;
+    }
+
+    transport->packets_received++;
     return true;
 }
 
@@ -76,87 +142,25 @@ bool dek_transport_send_hello(
     dek_transport_t *transport,
     uint8_t *tx_buffer,
     uint16_t tx_buffer_size,
-    uint16_t *encoded_length) {
-        dek_hello_payload_t hello;
-        dek_hello_payload_init(&hello);
-        return dek_transport_send(
-            transport,
-            DEK_MSG_HELLO,
-            0,
-            (const uint8_t *)&hello,
-            sizeof(hello),
-            tx_buffer,
-            tx_buffer_size, encoded_length);
+    uint16_t *encoded_length)
+{
+    dek_hello_payload_t hello;
+    uint8_t hello_buffer[DEK_HELLO_PAYLOAD_SIZE];
+
+    dek_hello_payload_init(&hello);
+
+    if (!dek_hello_encode(&hello, hello_buffer, sizeof(hello_buffer)))
+    {
+        return false;
     }
 
-bool transport_hello_self_test(void) {
-    // Init transport
-    dek_transport_t transport;
-    dek_transport_init(&transport);
-    uint8_t tx_buffer[256];
-    uint16_t encoded_length;
-
-    // Build HELLO packet
-    if (!dek_transport_send_hello(
-        &transport,
+    return dek_transport_send(
+        transport,
+        DEK_MSG_HELLO,
+        0u,
+        hello_buffer,
+        sizeof(hello_buffer),
         tx_buffer,
-        sizeof(tx_buffer),
-        &encoded_length))
-    {
-        return false;
-    }
-
-    // Decode packet
-    dek_packet_t decoded_packet;
-
-    if (!dek_packet_decode(
-            &decoded_packet,
-            tx_buffer,
-            encoded_length))
-    {
-        return false;
-    }
-    
-    //Verify: Message Type, Channel, Payload, Length, Sequence Number, CRC
-    if (decoded_packet.header.message_type != DEK_MSG_HELLO) {
-        printf("Message type failed");
-        return false;
-    }
-
-    if (decoded_packet.header.channel_id != 0) {
-        printf("Channel ID failed");
-        return false;
-    }
-
-    if (decoded_packet.header.payload_length != sizeof(dek_hello_payload_t)) {
-        printf("Payload length failed");
-        return false;
-    }
-
-    if (decoded_packet.header.sequence_number != 1) {
-        printf("Sequence type failed");
-        return false;
-    }
-
-    const dek_hello_payload_t *hello = (const dek_hello_payload_t *)decoded_packet.payload;
-    if (hello->host_flags != 0) {
-        printf("Host flags failed");
-        return false;
-    }
-    
-    if (hello->max_protocol_version != DEK_PROTOCOL_VERSION) {
-        printf("Max protocol version failed");
-        return false;
-    }
-
-    if (hello->min_protocol_version != DEK_PROTOCOL_VERSION) {
-        printf("Min protocol version failed");
-        return false;
-    }
-
-
-    // PASS
-    printf("Transport HELLO self-test PASSED\n");
-    return true;
-    
+        tx_buffer_size,
+        encoded_length);
 }

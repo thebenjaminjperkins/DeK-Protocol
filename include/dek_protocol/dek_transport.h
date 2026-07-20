@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "dek_message.h"
-#include "dek_packet.h"
+#include "dek_protocol/dek_message.h"
+#include "dek_protocol/dek_packet.h"
 
 /* Monotonic sequence number assigned to each outbound packet. */
 typedef struct
@@ -57,12 +57,16 @@ bool dek_transport_send(
     uint16_t tx_buffer_size,
     uint16_t *encoded_length);
 
+bool dek_transport_receive(
+    dek_transport_t *transport,
+    dek_packet_t *packet,
+    const uint8_t *rx_buffer,
+    uint16_t rx_buffer_size);
+
 bool dek_transport_send_hello(
     dek_transport_t *transport,
     uint8_t *tx_buffer,
     uint16_t tx_buffer_size,
     uint16_t *encoded_length);
 
-bool transport_hello_self_test(void);
-
-    #endif
+#endif

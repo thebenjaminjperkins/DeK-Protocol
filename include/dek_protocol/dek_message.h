@@ -2,14 +2,14 @@
 #define DEK_MESSAGE_H
 
 #include <stdint.h>
-#include "dek/message-types/dek_hello.h"
+
 /*
  * DeK Transport Message Types
  *
  * These values are part of the on-wire protocol and must remain stable.
  */
 
- #define DEK_PROTOCOL_VERSION 1
+#define DEK_PROTOCOL_VERSION 1u
 
 typedef enum
 {

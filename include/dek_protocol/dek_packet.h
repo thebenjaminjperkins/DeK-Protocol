@@ -2,10 +2,9 @@
 #ifndef DEK_PACKET_H
 #define DEK_PACKET_H
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <string.h>
+#include <stdint.h>
 
 #define DEK_PACKET_MAGIC_BYTE0     0x44
 #define DEK_PACKET_MAGIC_BYTE1     0x4B
@@ -46,6 +45,8 @@ typedef struct
 } dek_packet_t;
 
 void dek_packet_init(dek_packet_header_t *header);
+bool dek_packet_header_is_valid(const dek_packet_header_t *header);
+uint16_t dek_packet_encoded_size(uint16_t payload_length);
 
 bool dek_packet_encode_header(
     const dek_packet_header_t *header,
@@ -66,5 +67,10 @@ bool dek_packet_decode (
     dek_packet_t *packet,
     const uint8_t *buffer,
     uint16_t buffer_size);
+
+bool dek_packet_validate(
+    const uint8_t *buffer,
+    uint16_t buffer_size,
+    uint16_t *packet_size);
 
 #endif

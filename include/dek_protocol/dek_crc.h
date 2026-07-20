@@ -1,6 +1,7 @@
 #ifndef DEK_CRC_H
 #define DEK_CRC_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -9,5 +10,9 @@
 #define DEK_CRC16_MSB_MASK       0x8000
 
 uint16_t dek_crc16(const uint8_t *data, uint16_t length);
+bool dek_crc16_verify(
+    const uint8_t *data,
+    uint16_t length,
+    uint16_t expected_crc);
 
-#endif 
+#endif
