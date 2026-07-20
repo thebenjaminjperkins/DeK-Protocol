@@ -1,9 +1,10 @@
+#include <dek_protocol/dek_packet.h>
+
 int main(void)
 {
-    // Create a packet
-    // Encode it
-    // Decode it
-    // Verify it matches
+    dek_packet_header_t header;
+
+    dek_packet_init(&header);
 
     return 0;
 }
