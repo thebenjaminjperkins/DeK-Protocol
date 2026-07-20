@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#include "dek_transport.h"
-#include "messages/dek_hello.h"
+#include "../include/dek_transport.h"
+#include "../include/message-types/dek_hello.h"
 /*
  * Reset the transport state before sending any packets.
  *

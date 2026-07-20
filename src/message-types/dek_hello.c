@@ -1,5 +1,5 @@
-#include "dek_hello.h"
-#include "dek_message.h"
+#include "../include/message-types/dek_hello.h"
+#include "../include/dek_message.h"
 #include <stddef.h>
 
 void dek_hello_payload_init(dek_hello_payload_t *payload)

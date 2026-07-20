@@ -2,7 +2,7 @@
 #define DEK_MESSAGE_H
 
 #include <stdint.h>
-#include "messages/dek_hello.h"
+#include "message-types/dek_hello.h"
 /*
  * DeK Transport Message Types
  *
