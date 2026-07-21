@@ -15,6 +15,7 @@ static uint16_t dek_transport_allocate_sequence(dek_transport_t *transport)
 
     return sequence_number;
 }
+
 /*
  * Reset the transport state before sending any packets.
  *
@@ -49,29 +50,21 @@ bool dek_transport_send(
     uint16_t tx_buffer_size,
     uint16_t *encoded_length)
 {
+    dek_packet_t packet;
+
     if (transport == NULL || tx_buffer == NULL)
     {
         return false;
     }
 
-    dek_packet_t packet;
-
-    /* Initialize the header to the default protocol values before populating it. */
     dek_packet_init(&packet.header);
-
-    /* Populate the packet header with transport-layer and message-specific fields. */
     packet.header.message_type = message_type;
     packet.header.sequence_number = dek_transport_allocate_sequence(transport);
     packet.header.channel_id = channel;
     packet.header.payload_length = payload_length;
-
-    /* The payload is referenced directly by the encoder. */
     packet.payload = payload;
 
-    if (!dek_packet_encode(
-        &packet,
-        tx_buffer,
-        tx_buffer_size))
+    if (!dek_packet_encode(&packet, tx_buffer, tx_buffer_size))
     {
         return false;
     }

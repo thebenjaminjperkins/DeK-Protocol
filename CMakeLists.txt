@@ -9,6 +9,11 @@ target_sources(dek_protocol PRIVATE
     src/dek_receiver.c
     src/dek_transport.c
     src/message-types/dek_hello.c
+    src/message-types/dek_descriptor.c
+    src/message-types/dek_capabilities.c
+    src/message-types/dek_open_capability.c
+    src/capabilities/dek_uart_stream.c
+    src/capabilities/dek_gpio_digital.c
 )
 
 target_include_directories(dek_protocol
