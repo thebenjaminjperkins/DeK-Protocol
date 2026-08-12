@@ -127,8 +127,14 @@ Those belong to the firmware projects.
 
 # Current Scope
 
-At the current stage of development, DeK-Protocol exposes the core packet and
-transport implementation plus shared control-plane and capability contracts.
+At the current stage, DeK-Protocol supplies the core packet and transport
+implementation, shared control-plane payloads, and `gpio.digital` / `uart.stream`
+capability contracts. The host GPIO slice consumes these sources directly.
+
+The library has packet-level tests. The next protocol milestone is stronger
+contract coverage for the active GPIO slice—golden control-plane frames,
+malformed-input cases, and host/reference-module interoperability—before a
+physical SPI link is introduced.
 
 ## Packet Layer
 
